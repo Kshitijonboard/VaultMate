@@ -16,6 +16,7 @@ dotenv.config();
 const port =3000;
 const app=express();
 
+app.use(express.json());
 app.use(cookieParser());
 app.use(express.static("public"));
 app.use(bodyParser.urlencoded({extended:true}));
@@ -62,27 +63,33 @@ app.post("/signup",(req,res)=>{
 
   
 
-app.post("/signin",(req,res)=>{
-    console.log(req.body);
-    User.findOne({_id:req.body.mobile})
-    .then(detail=>{
-        console.log(detail);
-        if(detail==null){
-            res.render("usernotfound.ejs");
-        }else if(detail.Password==req.body.password){
-            const token = generate_token({user:req.body.mobile},'30m');
-            res.cookie('authToken', token, { httpOnly: true });
-            res.redirect("/user");
-        }
-        else{
-            res.render("wrongpassword.ejs");
-        }
-    })
-    .catch(err=>{
-        console.log(err);
-        res.redirect("/main");
-    })
+app.post("/signin", async (req, res) => {
+    console.log("Received Request Body:", req.body); // Debugging
+
+    if (!req.body.password) {
+        console.log("Error: Password field is missing in request.");
+        return res.status(400).send("Password is required.");
+    }
+
+    const detail = await User.findOne({ _id: req.body.mobile });
+
+    if (!detail) {
+        return res.render("usernotfound.ejs");
+    }
+
+    console.log(`Stored Password: "${detail.Password}"`);
+    console.log(`Entered Password: "${req.body.password}"`);
+
+    if (String(detail.Password).trim() === String(req.body.password).trim()) {
+        const token = generate_token({ user: req.body.mobile }, "30m");
+        res.cookie("authToken", token, { httpOnly: true });
+        return res.redirect("/user");
+    } else {
+        return res.render("wrongpassword.ejs");
+    }
 });
+
+
 
 
 
